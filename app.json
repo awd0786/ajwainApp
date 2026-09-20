@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "Sprint Dashboard",
+    "slug": "sprint-dashboard-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#3F7899"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#3F7899"
+      }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "4e71dd6b-757c-4d26-b93b-f5f69d2dc069"
+      }
+    }
+  }
+}
