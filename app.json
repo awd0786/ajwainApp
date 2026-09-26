@@ -1,22 +1,26 @@
 {
   "expo": {
-    "name": "Sprint Dashboard",
+    "name": "Ajwain TrioTree",
     "slug": "sprint-dashboard-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "splash": {
-      "backgroundColor": "#3F7899"
-    },
+    "icon": "./src/assets/ajwain-app-icon.png",
     "assetBundlePatterns": [
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.triotree.ajwain",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
+      "package": "com.triotree.ajwain",
+      "versionCode": 1,
       "adaptiveIcon": {
-        "backgroundColor": "#3F7899"
+        "backgroundColor": "#03081E"
       }
     },
     "extra": {
