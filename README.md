@@ -1,105 +1,88 @@
-# Sprint Dashboard — Expo Mobile App
+# Ajwain — Expo Mobile App
 
-React Native (Expo) port of the web Login + Sprint Dashboard pages.
+React Native (Expo SDK 57) version of the **Zentao SLA Dashboard** web app.
+It calls the same .NET API (`ZentaoController`) and applies the same role and
+`PermissionAPI` rules as the web app. The UI is built for phones and follows the
+device's light or dark setting.
 
 ## 1. Install & run
 
 ```bash
-npm install
+npm install          # new native modules were added; run this after pulling
 npx expo start
 ```
 
-Scan the QR code with **Expo Go** (iOS/Android), or press `a` / `i` for an emulator.
+New native modules: `expo-file-system`, `expo-sharing`, `expo-print`,
+`expo-document-picker`, `expo-web-browser`, `react-native-svg`,
+`@react-native-community/datetimepicker`. Expo Go already includes them. If you
+use a **development build** (EAS / `expo run:android`), rebuild it once.
 
-## 2. Point the app at your API — one file to edit
+If `npm install` reports peer-version warnings, run `npx expo install --fix` to
+align versions with the SDK.
 
-**`src/api/config.js`** is the single source of truth for the backend URL and every
-endpoint path. Every screen imports from here — nothing else hardcodes a URL.
+## 2. API URL
 
-```js
-export const BASE_URL = 'http://192.168.1.50:5000/api';
+`src/api/config.js` holds `BASE_URL` and every endpoint path (`ENDPOINTS`).
+Screens call `api.get('key', params)` / `api.post('key', params)` from
+`src/api/client.js`, and the bearer token is attached by `authFetch.js`.
+
+## 3. Pages (same keys as the web `currentPage`)
+
+| Drawer group | Page key | Screen |
+|---|---|---|
+| Bug Dashboard | `sla` | `BugDashboardScreen` |
+| Sprint | `sprint` | `SprintDashboardScreen` |
+| Patch Management | `patch`, `viewPatch`, `patchpriority` | `CreatePatchScreen`, `ViewPatchScreen`, `PatchPrioritizationScreen` |
+| Bug Monitoring | `pendingReplication`, `assignedCounts` | `PendingReplicationScreen`, `WorkloadScreen` |
+| Task Monitoring | `taskWorklist`, `ajwainBoard`, `createTask`, `taskView` | `TaskWorklistScreen`, `AjwainBoardScreen`, `CreateTaskScreen`, `TaskViewScreen` |
+| Critical Bugs Monitoring | `scrum` | `ScrumScreen` (Overview · Not Assigned · Critical) |
+| Reports | `report`, `findPoint` | `ReportScreen`, `FindPointScreen` |
+| Master | `sprintMaster`, `settings`, `userMaster`, `permission` | `SprintMasterScreen`, `SettingsScreen`, `UserMasterScreen`, `PermissionMasterScreen` |
+
+`src/navigation/pages.js` maps each key to its screen.
+
+## 4. Permissions
+
+- **Page access by role.** `src/auth/navigationMap.js` copies the web
+  `Navbar.jsx` `allowedKeys` and `App.jsx` `getDefaultPage()` exactly.
+- **Action permissions.** `src/auth/permissions.js` combines the hard-coded role
+  lists with the per-user `PermissionAPI` flags (`IsAddPoint`, `IsPointDrop`,
+  `IsSprintChange`, `IsCriticalPointAdd`, `IsSprintCreation`).
+  `PermissionContext` loads these flags once and every screen reads them.
+- The page-specific rules are kept as on the web. Examples: Testing Lead
+  client-side-testing actions, Dev Team Lead "save once" for target date and dev
+  efforts, sprint close (COO/CEO or user 14/15), critical-point close/delete
+  (Support / Product Owner or user 1/11).
+
+## 5. Project structure
+
 ```
-
-- Physical phone on the same Wi-Fi → use your dev machine's LAN IP.
-- Android emulator → `http://10.0.2.2:5000/api`.
-- iOS simulator → `http://localhost:5000/api` works.
-
-If a new endpoint is ever added to the API, add one line to `ENDPOINTS` in that
-file and call it via `apiUrl('yourKey', { param: value })` everywhere else.
-
-## 3. Project structure
-
-```
-App.js                          entry point
+App.js                      Theme → Toast → Auth → Navigator
 src/
-  api/
-    config.js                   BASE_URL + ENDPOINTS + apiUrl() — edit this for your server
-    authFetch.js                fetch wrapper that attaches the bearer token
-  context/
-    AuthContext.js              login/logout/session state (replaces sessionStorage reads)
-  utils/
-    storage.js                  AsyncStorage helpers (mobile's sessionStorage)
-    format.js                   date/ageing/status helpers ported from the web app
-  theme/
-    theme.js                    colors, spacing, radii, status color map
-  components/
-    FilterSheet.js              searchable slide-up picker (replaces Group/Product/Sprint/Client/Status dropdowns)
-    RecordCard.js                mobile card for one sprint point (replaces a table row)
-    StatusChartModal.js         animated status breakdown chart (replaces ChartModal)
-    ActionSheet.js              long-press action sheet (replaces right-click ContextMenu)
-    Badge.js                    status pill
-  navigation/
-    AppNavigator.js             switches Login <-> SprintDashboard based on auth state
-  screens/
-    LoginScreen.js
-    SprintDashboardScreen.js
+  api/                      config.js (URLs) · authFetch.js · client.js (api.get/post)
+  auth/                     navigationMap.js (role → pages) · permissions.js (action flags)
+  context/                  AuthContext · PermissionContext
+  navigation/               MainShell (single-page shell), AppHeader, AppDrawer, pages.js
+  theme/theme.js            light/dark palettes, makeStyles(), status colours
+  ui/                       design system: Card, Button, Pill, Select (single/multi),
+                            DateField, Sheet (bottom sheet), FilterSheet, charts (SVG), …
+  components/               MarkCriticalSheet, SprintSheets (add point, sprint change,
+                            point history, breakdown), CreateTaskForm, HtmlText, …
+  hooks/useAsync.js         loading / refresh helper
+  utils/                    format.js (dates, ageing, status) · exporter.js (xlsx/csv/pdf
+                            share, file open) · storage.js (AsyncStorage session)
+  screens/                  one file per page
 ```
 
-## 4. What changed vs. the web version (and why)
+## 6. How the web UI maps to mobile
 
-Mobile has no mouse, no `window`/`sessionStorage`, no `createPortal`, and a much
-narrower screen, so the same data/behavior is presented differently:
-
-- **`sessionStorage` → `AsyncStorage`** via `src/utils/storage.js`.
-- **Wide table → cards.** `RecordCard` shows the key fields; tap to expand the
-  rest (Module, Assigned To, Dev Hours, Ageing, Dev/Testing Lead, etc.).
-- **Dropdowns with `createPortal` → `FilterSheet`,** a single reusable,
-  searchable, slide-up sheet used for Product / Sprint / Status / Client.
-- **Right-click context menu → long-press `ActionSheet`,** offering the same
-  actions (Mark/Remove Client Side Testing, Point Drop / Revert, Sprint
-  Change) gated by the same role/permission checks as the web app
-  (`PermissionAPI`, `CEO/COO/Product Head/Product Owner`, `Testing Lead`).
-- **Pagination:** infinite scroll (`onEndReached`) instead of Prev/Next
-  buttons, same `PAGE_SIZE = 20`.
-- **Pull-to-refresh** replaces the manual "Refresh" button (the header
-  refresh icon still works too).
-- All colors/spacing/radii live in `src/theme/theme.js` so the look stays
-  consistent and easy to re-skin.
-
-## 5. Endpoints wired up
-
-`SprintData`, `PermissionAPI`, `GetProduct`, `TeamLeadModuleMappingData`,
-`TestingLeadModuleMappingData`, `GetPatchList`, `UpdateSprintClientSideTesting`,
-and `Login` are called from the dashboard/login screens exactly as in the web
-app. `GetProductGroup(Mapping)`, `AddPoint` (`GetPointSprint` /
-`GetPointDetails` / `InsertSLASprintPoint`), `SaveDevEfforts`,
-`UpdateTargetDate`, the Bug tab, and `MarkCritical` are already present in
-`ENDPOINTS` and are natural next screens/sheets to build using the same
-`FilterSheet` / `ActionSheet` / `authFetch` patterns already in the codebase.
-
-## 6. Notes
-
-- Uses Expo SDK 57 / React Native 0.86 / React 19.2 — matches the current
-  Expo Go app (iOS only supports the latest Expo Go build, so the project's
-  SDK has to track whatever's newest). If Expo Go on your phone updates to
-  a newer SDK again later and you see "Project is incompatible with this
-  version of Expo Go", run:
-  ```bash
-  npx expo install --fix
-  ```
-  to realign every package to the SDK your installed `expo` version expects
-  (bump `expo` itself in `package.json` first if a whole new SDK has shipped).
-- No native date-picker or icon-font dependency beyond `@expo/vector-icons`
-  (bundled with Expo) was added, to keep `npx expo start` working with zero
-  extra native config. Swap in `@react-native-community/datetimepicker` for
-  a native calendar UI on the Target Date field when you build that editor.
+- **Tables → cards.** Every row is a card with the key fields shown, plus a
+  "Details" toggle for the rest.
+- **Dropdowns and modals → bottom sheets.** Searchable single/multi-select
+  pickers, plus a filter sheet with active-filter chips.
+- **Right-click menu → tap a card** for the action sheet. **Row checkboxes →
+  long-press** to multi-select (bulk sprint change).
+- **Excel / CSV / PDF export** builds the file on the device and opens the share
+  sheet.
+- **Pagination → "Load more"** (same page sizes). **Pull to refresh** on every
+  list.

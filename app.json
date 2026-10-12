@@ -4,7 +4,7 @@
     "slug": "sprint-dashboard-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "icon": "./src/assets/ajwain-app-icon.png",
     "assetBundlePatterns": [
       "**/*"
