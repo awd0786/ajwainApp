@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import { Banner, Button, Sheet, TextField } from '../ui';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { updateStoredPassword } from '../auth/biometric';
 
 /** Port of ChangePasswordSlider.jsx – POST ChangePasswordSLADashboard?account=&password= */
 export default function ChangePasswordSheet({ visible, onClose }) {
@@ -30,6 +31,7 @@ export default function ChangePasswordSheet({ visible, onClose }) {
     try {
       const data = await api.post('changePassword', { account: session.loginName, password: newPassword });
       if (data && data.success) {
+        await updateStoredPassword(session.loginName, newPassword); // keep biometric login working
         setMessage({ type: 'success', text: data.message || 'Password changed successfully.' });
         setNewPassword('');
         setConfirmPassword('');

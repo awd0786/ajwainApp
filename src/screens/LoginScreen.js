@@ -14,14 +14,27 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { apiUrl } from '../api/config';
+import { loginRequest } from '../api/loginApi';
+import {
+  authenticate,
+  disableBiometric,
+  enableBiometric,
+  getBiometricInfo,
+  getStoredCredentials,
+  isBiometricEnabled,
+  markAskedToEnable,
+  wasAskedToEnable,
+} from '../auth/biometric';
 import { useAuth } from '../context/AuthContext';
 import { makeStyles, radii, shadowFor, useTheme } from '../theme/theme';
-import { Banner, Button } from '../ui';
+import { Banner, Button, confirmAsync } from '../ui';
 
 const HISTREE_LOGO = require('../assets/HISTree-logo.png');
 const HISTREE_LOGO_DARK = require('../assets/HISTree-logo-dark.png'); // "Tree" in white for dark mode
 const APP_ICON = require('../assets/ajwain-app-icon.png');
+
+// Auto-prompt for biometrics only once per app launch (not again after a manual logout).
+let autoPromptDone = false;
 
 /** Port of Login.jsx – POST /Zentao/Login { loginName, password }. */
 export default function LoginScreen() {
@@ -51,6 +64,32 @@ export default function LoginScreen() {
     ).start();
   }, [enter, orb]);
 
+  const [bio, setBio] = useState({ available: false, label: 'Biometrics', icon: 'shield' });
+  const [bioEnabled, setBioEnabled] = useState(false);
+  const [bioLoading, setBioLoading] = useState(false);
+
+  /** Offer to turn on biometric login after a successful password sign-in. */
+  const maybeEnableBiometric = async (loginName, pwd) => {
+    const info = await getBiometricInfo();
+    if (!info.available) return;
+    const stored = await getStoredCredentials();
+    if ((await isBiometricEnabled()) && stored?.loginName === loginName) {
+      await enableBiometric(loginName, pwd); // keep the saved password current
+      return;
+    }
+    if (!stored && (await wasAskedToEnable())) return; // asked once already – don't nag
+    const yes = await confirmAsync(
+      `Enable ${info.label} login?`,
+      `Next time, sign in to Ajwain with ${info.label} instead of typing your password.`,
+      { confirmText: 'Enable' },
+    );
+    await markAskedToEnable();
+    if (!yes) return;
+    const auth = await authenticate(`Confirm ${info.label} for Ajwain`);
+    if (auth.ok) await enableBiometric(loginName, pwd);
+    else if (auth.message) await confirmAsync(`${info.label} not turned on`, auth.message, { confirmText: 'OK' });
+  };
+
   const handleLogin = async () => {
     setError('');
     if (!userName.trim() || !password) {
@@ -58,29 +97,60 @@ export default function LoginScreen() {
       return;
     }
     setLoading(true);
-    try {
-      const res = await fetch(apiUrl('login'), {
-        method: 'POST',
-        headers: { accept: '*/*', 'Content-Type': 'application/json-patch+json' },
-        body: JSON.stringify({ loginName: userName.trim(), password }),
-      });
-      let data = null;
-      try {
-        data = await res.json();
-      } catch {
-        data = null;
-      }
-      if (res.ok && data?.success) {
-        await login(data);
-      } else {
-        setError(data?.message || 'Invalid credentials.');
-      }
-    } catch {
-      setError('Network error. Please check your connection and try again.');
-    } finally {
+    const res = await loginRequest(userName, password);
+    if (res.ok) {
+      await maybeEnableBiometric(userName.trim(), password);
       setLoading(false);
+      await login(res.data);
+      return;
+    }
+    setError(res.message);
+    setLoading(false);
+  };
+
+  const handleBiometric = async () => {
+    setError('');
+    const creds = await getStoredCredentials();
+    if (!creds) {
+      await disableBiometric();
+      setBioEnabled(false);
+      return;
+    }
+    const auth = await authenticate(`Sign in to Ajwain with ${bio.label}`);
+    if (!auth.ok) {
+      if (auth.message) setError(auth.message);
+      return;
+    }
+    setBioLoading(true);
+    const res = await loginRequest(creds.loginName, creds.password);
+    setBioLoading(false);
+    if (res.ok) {
+      await login(res.data);
+      return;
+    }
+    if (!res.network) {
+      // Password changed or account locked – stop using the stale saved password.
+      await disableBiometric();
+      setBioEnabled(false);
+      setUserName(creds.loginName);
+      setError(`${res.message} ${bio.label} login has been turned off – please sign in with your password.`);
+    } else {
+      setError(res.message);
     }
   };
+
+  useEffect(() => {
+    (async () => {
+      const [info, enabled, creds] = await Promise.all([getBiometricInfo(), isBiometricEnabled(), getStoredCredentials()]);
+      setBio(info);
+      const on = enabled && info.available;
+      setBioEnabled(on);
+      if (creds?.loginName) setUserName((u) => u || creds.loginName);
+      if (on && !autoPromptDone) setTimeout(() => handleBiometric(), 450); // app launch → ask straight away
+      autoPromptDone = true;
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const translateY = enter.interpolate({ inputRange: [0, 1], outputRange: [40, 0] });
   const orbY = orb.interpolate({ inputRange: [0, 1], outputRange: [0, 30] });
@@ -104,7 +174,6 @@ export default function LoginScreen() {
           <Animated.View style={[s.card, shadowFor(c, 2), { opacity: enter, transform: [{ translateY }] }]}>
             <Image source={dark ? HISTREE_LOGO_DARK : HISTREE_LOGO} style={s.logo} resizeMode="contain" />
             <Text style={s.welcome}>Welcome back</Text>
-            <Text style={s.subWelcome}>Sign in with your Zentao account to continue.</Text>
 
             <Text style={s.label}>Username</Text>
             <View style={[s.inputWrap, focused === 'u' && { borderColor: c.primary, backgroundColor: c.surface }]}>
@@ -156,6 +225,26 @@ export default function LoginScreen() {
             {!!error && <Banner type="error" text={error} style={{ marginTop: 14 }} />}
 
             <Button title={loading ? 'Signing in…' : 'Sign in'} iconRight={loading ? undefined : 'arrow-right'} size="lg" loading={loading} onPress={handleLogin} style={{ marginTop: 22 }} />
+
+            {bioEnabled && (
+              <>
+                <View style={s.orRow}>
+                  <View style={s.orLine} />
+                  <Text style={s.orText}>or</Text>
+                  <View style={s.orLine} />
+                </View>
+                <Pressable
+                  onPress={handleBiometric}
+                  disabled={bioLoading || loading}
+                  style={({ pressed }) => [s.bioBtn, pressed && { transform: [{ scale: 0.98 }] }, (bioLoading || loading) && { opacity: 0.6 }]}
+                >
+                  <View style={s.bioIcon}>
+                    <Feather name={bio.icon} size={20} color={c.primary} />
+                  </View>
+                  <Text style={s.bioText}>{bioLoading ? 'Signing in…' : `Sign in with ${bio.label}`}</Text>
+                </Pressable>
+              </>
+            )}
           </Animated.View>
 
           <Text style={s.footer}>© {new Date().getFullYear()} TrioTree Technologies · HISTree</Text>
@@ -190,5 +279,22 @@ const useStyles = makeStyles((c) => ({
     paddingHorizontal: 14,
   },
   input: { flex: 1, color: c.text, fontSize: 15, paddingVertical: 0 },
+  orRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 18 },
+  orLine: { flex: 1, height: 1, backgroundColor: c.border },
+  orText: { color: c.textFaint, fontSize: 12, fontWeight: '700' },
+  bioBtn: {
+    marginTop: 14,
+    height: 52,
+    borderRadius: radii.md,
+    borderWidth: 1.4,
+    borderColor: c.primary,
+    backgroundColor: c.primarySoft,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  bioIcon: { width: 32, height: 32, borderRadius: 10, backgroundColor: c.surface, alignItems: 'center', justifyContent: 'center' },
+  bioText: { color: c.primary, fontSize: 15, fontWeight: '800' },
   footer: { textAlign: 'center', color: c.textFaint, fontSize: 11.5, marginTop: 22 },
 }));

@@ -16,7 +16,7 @@ const DRAWER_W = Math.min(330, SCREEN_W * 0.86);
  * Navbar (getVisibleGroups). `single` groups navigate on tap, `dropdown`
  * groups expand in place.
  */
-export default function AppDrawer({ visible, currentPage, role, realName, loginName, onNavigate, onClose, onChangePassword, onLogout }) {
+export default function AppDrawer({ visible, currentPage, role, realName, loginName, onNavigate, onClose, onChangePassword, onBiometric, onLogout }) {
   const s = useStyles();
   const { c, dark } = useTheme();
   const insets = useSafeAreaInsets();
@@ -64,7 +64,7 @@ export default function AppDrawer({ visible, currentPage, role, realName, loginN
               <Image source={require('../assets/ajwain-app-icon.png')} style={s.brandLogo} resizeMode="contain" />
               <View style={{ flex: 1 }}>
                 <Text style={s.brandTitle}>Ajwain</Text>
-                <Text style={s.brandSub}>TrioTree · SLA Dashboard</Text>
+                <Text style={s.brandSub}>TrioTree Technologies Pvt. Ltd.</Text>
               </View>
               <Pressable onPress={onClose} hitSlop={10} style={s.closeBtn}>
                 <Feather name="x" size={17} color="#fff" />
@@ -137,6 +137,11 @@ export default function AppDrawer({ visible, currentPage, role, realName, loginN
             })}
           </ScrollView>
 
+          <Pressable style={({ pressed }) => [s.bioRow, pressed && { opacity: 0.7 }]} onPress={() => (onClose?.(), onBiometric?.())}>
+            <Feather name="shield" size={15} color={c.primary} />
+            <Text style={[s.footerBtnText, { color: c.primary, flex: 1 }]}>Fingerprint / Face ID login</Text>
+            <Feather name="chevron-right" size={15} color={c.textFaint} />
+          </Pressable>
           <View style={[s.footer, { paddingBottom: insets.bottom + 10 }]}>
             <Pressable style={({ pressed }) => [s.footerBtn, pressed && { opacity: 0.7 }]} onPress={() => (onClose?.(), onChangePassword?.())}>
               <Feather name="lock" size={15} color={c.textMuted} />
@@ -199,5 +204,6 @@ const useStyles = makeStyles((c) => ({
 
   footer: { flexDirection: 'row', gap: 8, paddingHorizontal: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: c.border },
   footerBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, height: 42, borderRadius: radii.md, backgroundColor: c.surfaceAlt },
+  bioRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 16, marginTop: 8, paddingHorizontal: 14, height: 42, borderRadius: radii.md, backgroundColor: c.primarySoft },
   footerBtnText: { fontSize: 12.5, color: c.textMuted, fontWeight: '800' },
 }));

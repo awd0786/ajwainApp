@@ -6,7 +6,7 @@ import { rowsOf } from '../api/authFetch';
 import { zentaoLink } from '../api/config';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../context/PermissionContext';
-import { useHeaderActions } from '../navigation/ShellContext';
+import { useHeaderActions, useShell } from '../navigation/ShellContext';
 import { blend, hashColor, makeStyles, toneOf, useTheme } from '../theme/theme';
 import {
   fmtDateTime,
@@ -226,8 +226,9 @@ export default function SprintDashboardScreen() {
   }, [patchCreationMap]);
 
   /* ---------------- filters ---------------- */
-  const [selectedSprint, setSelectedSprint] = useState('');
-  const [selectedProduct, setSelectedProduct] = useState('');
+  const { pageParams } = useShell();
+  const [selectedSprint, setSelectedSprint] = useState(pageParams?.sprint ? String(pageParams.sprint) : '');
+  const [selectedProduct, setSelectedProduct] = useState(pageParams?.product ? String(pageParams.product) : '');
   const [selectedGroupId, setSelectedGroupId] = useState('');
   const productManualAllRef = useRef(false);
   const sprintManualAllRef = useRef(false);
@@ -237,7 +238,8 @@ export default function SprintDashboardScreen() {
   const [typeFilter, setTypeFilter] = useState('');
   const [selectedDevLead, setSelectedDevLead] = useState('');
   const [selectedTestingLead, setSelectedTestingLead] = useState('');
-  const [search, setSearch] = useState('');
+  // Opened from a "new sprint point" push notification → pre-search that point.
+  const [search, setSearch] = useState(pageParams?.search ? String(pageParams.search) : '');
   const [showCriticalOnly, setShowCriticalOnly] = useState(false);
   const [sortKey, setSortKey] = useState('');
   const [filterOpen, setFilterOpen] = useState(false);

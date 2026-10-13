@@ -34,6 +34,10 @@ export const ENDPOINTS = {
   login: '/Zentao/Login',
   changePassword: '/Zentao/ChangePasswordSLADashboard',
 
+  /* PUSH NOTIFICATIONS – device token registry (Expo push tokens) */
+  registerPushToken: '/Zentao/RegisterPushToken',
+  unregisterPushToken: '/Zentao/UnregisterPushToken',
+
   /* ---------------------------------------------------------------
      PERMISSIONS
      PermissionAPI  -> per-user runtime flags used to gate UI.

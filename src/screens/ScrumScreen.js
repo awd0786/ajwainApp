@@ -6,7 +6,7 @@ import { rowsOf } from '../api/authFetch';
 import { zentaoLink } from '../api/config';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../context/PermissionContext';
-import { useHeaderActions } from '../navigation/ShellContext';
+import { useHeaderActions, useShell } from '../navigation/ShellContext';
 import { makeStyles, toneOf, useTheme } from '../theme/theme';
 import { fmtDate, fmtDateTime, getTargetDateStatus } from '../utils/format';
 import { exportExcel, openUrl } from '../utils/exporter';
@@ -189,7 +189,8 @@ export default function ScrumScreen() {
   const userIdNum = Number(session.userId || 0);
   const showCriticalActions = userIdNum === 1 || userIdNum === 11 || canMarkCritical(session.role);
 
-  const [tab, setTab] = useState('dashboard');
+  const { pageParams } = useShell();
+  const [tab, setTab] = useState(pageParams?.tab || 'dashboard');
 
   /* ---------------- data ---------------- */
   const [data, setData] = useState([]);

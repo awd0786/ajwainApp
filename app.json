@@ -13,7 +13,8 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.triotree.ajwain",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSFaceIDUsageDescription": "Allow Ajwain to use Face ID to sign you in."
       }
     },
     "android": {
@@ -21,12 +22,36 @@
       "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#03081E"
-      }
+      },
+      "permissions": [
+        "USE_BIOMETRIC",
+        "USE_FINGERPRINT",
+        "POST_NOTIFICATIONS"
+      ]
     },
     "extra": {
       "eas": {
         "projectId": "4e71dd6b-757c-4d26-b93b-f5f69d2dc069"
       }
-    }
+    },
+    "plugins": [
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Allow Ajwain to use Face ID to sign you in."
+        }
+      ],
+      "expo-secure-store",
+      [
+        "expo-notifications",
+        {
+          "color": "#5B4BF5",
+          "defaultChannel": "ajwain-default"
+        }
+      ],
+      "@react-native-community/datetimepicker",
+      "expo-sharing",
+      "expo-splash-screen"
+    ]
   }
 }

@@ -4,7 +4,7 @@ import { Feather } from '@expo/vector-icons';
 import { api } from '../api/client';
 import { zentaoLink } from '../api/config';
 import { useAuth } from '../context/AuthContext';
-import { useHeaderActions } from '../navigation/ShellContext';
+import { useHeaderActions, useShell } from '../navigation/ShellContext';
 import { makeStyles, statusTone, useTheme } from '../theme/theme';
 import { fmtDateTime, isPatchCreatedToday, uniqSorted } from '../utils/format';
 import { exportCsv, openUrl } from '../utils/exporter';
@@ -69,7 +69,9 @@ export default function ViewPatchScreen() {
   const [error, setError] = useState(null);
   const [typeFilter, setTypeFilter] = useState('');
   const [productFilter, setProductFilter] = useState('');
-  const [search, setSearch] = useState('');
+  const { pageParams } = useShell();
+  // Opened from a "patch created" push notification → pre-filter to that patch.
+  const [search, setSearch] = useState(pageParams?.patchId ? String(pageParams.patchId) : '');
   const [openKey, setOpenKey] = useState(null);
   const [testingUsers, setTestingUsers] = useState([]);
   const [userRoleMap, setUserRoleMap] = useState({});

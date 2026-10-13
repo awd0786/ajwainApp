@@ -7,7 +7,9 @@ import { getDefaultPage, isPageAllowed, PAGE_META } from '../auth/navigationMap'
 import AppHeader from './AppHeader';
 import AppDrawer from './AppDrawer';
 import ChangePasswordSheet from '../components/ChangePasswordSheet';
+import BiometricSheet from '../components/BiometricSheet';
 import { PAGES } from './pages';
+import PushBridge from '../push/PushBridge';
 import { Empty } from '../ui';
 import { useTheme } from '../theme/theme';
 
@@ -16,6 +18,7 @@ function ShellBody() {
   const { c } = useTheme();
   const { currentPage, replace, canGoBack, goBack, headerActions, drawerOpen, setDrawerOpen } = useShell();
   const [pwdOpen, setPwdOpen] = useState(false);
+  const [bioOpen, setBioOpen] = useState(false);
 
   // Android hardware back: close drawer → go back → default
   useEffect(() => {
@@ -63,9 +66,11 @@ function ShellBody() {
         onNavigate={(key) => replace(key)}
         onClose={() => setDrawerOpen(false)}
         onChangePassword={() => setPwdOpen(true)}
+        onBiometric={() => setBioOpen(true)}
         onLogout={logout}
       />
       <ChangePasswordSheet visible={pwdOpen} onClose={() => setPwdOpen(false)} />
+      <BiometricSheet visible={bioOpen} onClose={() => setBioOpen(false)} />
     </View>
   );
 }
@@ -75,6 +80,7 @@ export default function MainShell() {
   return (
     <PermissionProvider>
       <ShellProvider initialPage={getDefaultPage(session.role)}>
+        <PushBridge />
         <ShellBody />
       </ShellProvider>
     </PermissionProvider>
