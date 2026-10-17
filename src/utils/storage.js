@@ -36,6 +36,11 @@ export async function getSession() {
   };
 }
 
+/** Replaces the stored token (used when the API returns a renewed one). */
+export async function setToken(token) {
+  if (token) await AsyncStorage.setItem(KEYS.token, token);
+}
+
 export async function getToken() {
   return (await AsyncStorage.getItem(KEYS.token)) || '';
 }

@@ -1,4 +1,4 @@
-import { getToken } from '../utils/storage';
+import { getToken, setToken } from '../utils/storage';
 
 /* ------------------------------------------------------------------ */
 /* Session-expiry broadcast (web: window 'tokenExpired' event)         */
@@ -37,6 +37,10 @@ export async function authFetch(url, options = {}) {
   };
 
   const res = await fetch(url, { ...options, headers });
+
+  // Sliding session: the API sends a renewed token while the current one is still valid.
+  const refreshed = res.headers?.get?.('X-Refreshed-Token');
+  if (refreshed) await setToken(refreshed);
 
   if (res.status === 401) {
     emitExpired();
